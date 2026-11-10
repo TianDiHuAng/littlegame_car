@@ -3800,6 +3800,7 @@
       setTool: setTool,
       syncRank: syncRank,
       share: shareNow,
+      resetProgress: resetProgress,
       get pointerDown() { return pointer.down; },
       get frames() { return frameCount; },
       get pointerXY() { return [pointer.x, pointer.y]; },

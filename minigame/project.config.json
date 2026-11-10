@@ -24,6 +24,10 @@
       },
       {
         "type": "file",
+        "value": "adaptertest.html"
+      },
+      {
+        "type": "file",
         "value": "_envtest.png"
       },
       {

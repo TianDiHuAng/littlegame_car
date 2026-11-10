@@ -136,6 +136,7 @@ writeFileSync(join(OUT, 'project.config.json'), JSON.stringify({
     ignore: [
       { type: 'file', value: 'preview.html' },
       { type: 'file', value: 'envtest.html' },
+      { type: 'file', value: 'adaptertest.html' },
       { type: 'file', value: '_envtest.png' },
       { type: 'file', value: '_rank.png' }
     ],
@@ -178,6 +179,26 @@ writeFileSync(join(OUT, 'envtest.html'), `<!doctype html>
 <body>
   <script>window.__HARSH__ = true;</script>
   <script src="../tools/wx-shim.js"></script>
+  <script src="./game.js"></script>
+</body>
+</html>
+`, 'utf8');
+
+// ---------- 适配层专项测试页（真加载 adapter.js，不进小游戏包） ----------
+writeFileSync(join(OUT, 'adaptertest.html'), `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>适配层测试 · 亮车计划</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1520; }
+  canvas { touch-action: none; display: block; }
+</style>
+</head>
+<body>
+  <script src="../tools/wx-fake.js"></script>
+  <script src="./adapter.js"></script>
   <script src="./game.js"></script>
 </body>
 </html>

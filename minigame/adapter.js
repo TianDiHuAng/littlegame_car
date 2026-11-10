@@ -139,9 +139,10 @@
   });
   install('removeEventListener', function () {});
 
-  // 可视区变化时通知游戏重新布局（画布尺寸由游戏的 resize() 自己设置）
+  // 可视区变化时同步画布尺寸并通知游戏重新布局
   if (wx.onWindowResize) {
     wx.onWindowResize(function () {
+      applyCanvasSize();
       for (var i = 0; i < resizeHooks.length; i++) {
         try { resizeHooks[i]({ type: 'resize' }); } catch (e) {}
       }
