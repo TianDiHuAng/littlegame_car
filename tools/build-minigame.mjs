@@ -38,16 +38,36 @@ if (existsSync(OUT)) {
 mkdirSync(IMG_DIR, { recursive: true });
 
 // ---------- 素材：改成文件路径，不用 base64 ----------
-const webps = readdirSync(join(SRC, 'assets')).filter((f) => f.endsWith('.webp'));
-if (!webps.length) throw new Error('prototype/assets 里没有 webp，先跑 tools/make-assets.mjs');
+// 只打包游戏真正用到的（assets/ 里还有 raw_* 等中间产物，不能进包）
+const NEEDED = [
+  'bg_outdoor', 'bg_dawn', 'bg_dusk',
+  'brick_wall', 'car_black', 'car_coupe', 'car_jeep', 'car_sedan', 'car_truck', 'car_van',
+  'dirt_heavy', 'dirt_soft', 'fx_foam', 'fx_splash', 'grime_hard', 'hub',
+  'paint_damage', 'vase', 'window'
+];
+
+const assetDir = join(SRC, 'assets');
+function findAsset(key) {
+  for (const ext of ['.png', '.jpg', '.jpeg', '.webp']) {
+    if (existsSync(join(assetDir, key + ext))) return key + ext;
+  }
+  return null;
+}
+
+const pics = [];
+for (const k of NEEDED) {
+  const f = findAsset(k);
+  if (f) pics.push({ key: k, file: f });
+  else console.warn('  ! 缺素材:', k);
+}
+if (!pics.length) throw new Error('prototype/assets 里找不到可用素材');
 
 let assetJs = '/* 素材映射（构建生成） */\nwindow.CW_IMG = {\n';
 let total = 0;
-for (const f of webps) {
-  const key = f.replace(/\.webp$/, '');
-  copyFileSync(join(SRC, 'assets', f), join(IMG_DIR, f));
-  total += readFileSync(join(SRC, 'assets', f)).length;
-  assetJs += `  ${key}: "images/${f}",\n`;
+for (const p of pics) {
+  copyFileSync(join(assetDir, p.file), join(IMG_DIR, p.file));
+  total += readFileSync(join(assetDir, p.file)).length;
+  assetJs += `  ${p.key}: "images/${p.file}",\n`;
 }
 assetJs += '};\n';
 
@@ -168,7 +188,7 @@ const entrySize = readFileSync(join(OUT, 'game.js')).length;
 const totalSize = entrySize + total;
 console.log('构建完成 → minigame/');
 console.log(`  game.js   ${(entrySize / 1024).toFixed(0)} KB`);
-console.log(`  images/   ${webps.length} 张，${(total / 1024).toFixed(0)} KB`);
+console.log(`  images/   ${pics.length} 张，${(total / 1024).toFixed(0)} KB`);
 console.log(`  合计      ${(totalSize / 1024 / 1024).toFixed(2)} MB  （主包上限 4 MB）`);
 
 // 粗查：入口里不该再有 DOM 专属调用
