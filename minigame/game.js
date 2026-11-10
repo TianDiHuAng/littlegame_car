@@ -1532,6 +1532,17 @@ window.CW_IMG = {
     cv.style.width = W + 'px';
     cv.style.height = H + 'px';
 
+    // 运行时可能强制接管画布缓冲区（比如固定成屏幕物理分辨率）。
+    // 那样我们按 CSS 尺寸绘制就只会铺满一部分，下面留一大块空白。
+    // 以缓冲区真实像素为准反推逻辑尺寸，保证画面一定铺满。
+    var bw = cv.width, bh = cv.height;
+    var wantW = Math.round(W * DPR), wantH = Math.round(H * DPR);
+    if (bw && bh && (bw !== wantW || bh !== wantH)) {
+      DPR = bh / H;                 // 以高度为准推算缩放比
+      if (!(DPR > 0) || !isFinite(DPR)) DPR = 1;
+      W = bw / DPR;
+    }
+
     [dirtCv, cleanCv, beforeCv, heavyCv, tintCv].forEach(function (c) {
       c.width = cv.width;
       c.height = cv.height;
@@ -4477,8 +4488,7 @@ window.CW_IMG = {
   function restartLevel() { startOrder(order); }
 
   function render() {
-    buttons = [];
-    if (state === 'compare') {
+    buttons = [];    if (state === 'compare') {
       drawCompare();
       return;
     }
@@ -4504,6 +4514,35 @@ window.CW_IMG = {
     drawHUD();
     if (state === 'done') drawDone();
     if (state === 'upgrade') drawUpgrade();
+    drawSizeDebug();
+  }
+
+  /** 临时诊断：把运行时真实尺寸打在屏幕右上角 */
+  function drawSizeDebug() {
+    try {
+      var i2 = {};
+      try {
+        if (typeof wx !== 'undefined' && wx.getSystemInfoSync) i2 = wx.getSystemInfoSync() || {};
+      } catch (e) {}
+      var lines = [
+        'scr ' + (i2.screenWidth || '?') + 'x' + (i2.screenHeight || '?') + ' @' + (i2.pixelRatio || '?'),
+        'win ' + (i2.windowWidth || '?') + 'x' + (i2.windowHeight || '?'),
+        'buf ' + cv.width + 'x' + cv.height,
+        'use ' + Math.round(W) + 'x' + Math.round(H) + ' d' + DPR.toFixed(2)
+      ];
+      var bw2 = 158, lh = 15;
+      ctx.save();
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.font = '11px monospace';
+      ctx.fillStyle = 'rgba(0,0,0,0.62)';
+      ctx.fillRect(W - bw2 - 4, SAFE_TOP + 116, bw2, 8 + lines.length * lh);
+      ctx.fillStyle = '#6ff0b4';
+      for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], W - bw2, SAFE_TOP + 120 + i * lh);
+      }
+      ctx.restore();
+    } catch (e) {}
   }
 
   /* ---------------------------------------------------------------
