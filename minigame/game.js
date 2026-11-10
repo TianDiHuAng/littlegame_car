@@ -1444,8 +1444,10 @@ window.CW_IMG = {
    * ------------------------------------------------------------- */
   function resize() {
     var r = stage.getBoundingClientRect();
-    var nw = Math.max(300, Math.round(r.width));
-    var nh = Math.max(420, Math.round(r.height));
+    // 某些基础库下 getBoundingClientRect 可能返回 NaN，会让画布变成 0 号尺寸（黑屏）
+    var nw = Math.max(300, Math.round(r.width) || 0);
+    var nh = Math.max(420, Math.round(r.height) || 0);
+    if (!isFinite(nw) || !isFinite(nh)) { nw = 360; nh = 640; }
 
     // 移动端地址栏收起/展开只拉伸画布，不重置关卡
     if (hasLayout && Math.abs(nw - W) < 80 && Math.abs(nh - H) < 180) {
@@ -1456,7 +1458,9 @@ window.CW_IMG = {
     hasLayout = true;
 
     W = nw; H = nh;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = window.devicePixelRatio;
+    if (!(DPR > 0) || !isFinite(DPR)) DPR = 1;
+    DPR = Math.min(DPR, 2);
 
     cv.width = Math.round(W * DPR);
     cv.height = Math.round(H * DPR);
@@ -4540,12 +4544,41 @@ window.CW_IMG = {
    * ------------------------------------------------------------- */
   var lastT = 0;
   var frameCount = 0, lastErr = '';
+  var fatalShown = false;
+
+  /** 出错了就把信息画在画布上 —— 真机/模拟器里看不见 console */
+  function fatal(e) {
+    try {
+      var msg = (e && (e.stack || e.message)) || String(e);
+      console.error('[fatal]', msg);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#101820';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = '#ff7a7a';
+      ctx.font = '18px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      var lines = String(msg).split('\n');
+      for (var i = 0; i < lines.length && i < 18; i++) {
+        ctx.fillText(lines[i].slice(0, 46), 16, 24 + i * 24);
+      }
+    } catch (e2) {}
+  }
+
   function frame(t) {
     frameCount++;
     var dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
-    update(dt);
-    render();
+    try {
+      update(dt);
+      render();
+    } catch (e) {
+      if (!fatalShown) {
+        fatalShown = true;
+        fatal(e);
+      }
+      return;
+    }
     requestAnimationFrame(frame);
   }
 
@@ -4612,13 +4645,17 @@ window.CW_IMG = {
     };
   }
 
-  makeGrain();
-  setupShare();
-  setupRecorder();
-  resize();
-  startOrder(LEVELS[clamp(levelIndex, 0, LEVELS.length - 1)]);
-  loadImages(function () { configureLevel(); });
-  requestAnimationFrame(frame);
+  try {
+    makeGrain();
+    setupShare();
+    setupRecorder();
+    resize();
+    startOrder(LEVELS[clamp(levelIndex, 0, LEVELS.length - 1)]);
+    loadImages(function () { configureLevel(); });
+    requestAnimationFrame(frame);
+  } catch (e) {
+    fatal(e);
+  }
 })();
 
 
