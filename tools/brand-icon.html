@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;overflow:hidden;background:transparent}#c{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script>
+// 小游戏头像：1024×1024，缩到 144 / 64 也要认得出来
+const S = 1024;
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+
+function load(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+
+function roundRect(x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+(async () => {
+  const car = await load('../prototype/assets/car_sedan.webp');
+
+  // 底：天空渐变（满幅方形，圆角由微信自己裁）
+  const sky = g.createLinearGradient(0, 0, 0, S);
+  sky.addColorStop(0, '#8fd2f7');
+  sky.addColorStop(0.55, '#4fa8e0');
+  sky.addColorStop(1, '#2a7bb8');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, S, S);
+
+  // 顶部柔光
+  const glow = g.createRadialGradient(S * 0.72, S * 0.16, 0, S * 0.72, S * 0.16, S * 0.75);
+  glow.addColorStop(0, 'rgba(255,255,255,0.42)');
+  glow.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = glow;
+  g.fillRect(0, 0, S, S);
+
+  // 地面
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, S, S);
+  g.clip();
+  const grassY = S * 0.74;
+  const gr = g.createLinearGradient(0, grassY - 40, 0, S);
+  gr.addColorStop(0, '#7fd39b');
+  gr.addColorStop(1, '#4aa873');
+  g.fillStyle = gr;
+  g.beginPath();
+  g.moveTo(0, grassY + 26);
+  g.quadraticCurveTo(S * 0.5, grassY - 34, S, grassY + 26);
+  g.lineTo(S, S);
+  g.lineTo(0, S);
+  g.closePath();
+  g.fill();
+  g.restore();
+
+  // 车：占宽 78%，底部对齐
+  const cw = S * 0.80;
+  const ch = car.height * (cw / car.width);
+  const cx = (S - cw) / 2;
+  const cy = S * 0.80 - ch;
+
+  // 接地阴影
+  g.save();
+  const sh = g.createRadialGradient(S * 0.5, S * 0.80, 0, S * 0.5, S * 0.80, cw * 0.52);
+  sh.addColorStop(0, 'rgba(24,58,40,0.34)');
+  sh.addColorStop(1, 'rgba(24,58,40,0)');
+  g.fillStyle = sh;
+  g.beginPath();
+  g.ellipse(S * 0.5, S * 0.805, cw * 0.52, ch * 0.10, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  g.drawImage(car, cx, cy, cw, ch);
+
+  // 水柱：从右上方打向车头
+  const nx = S * 0.94, ny = S * 0.30;
+  const px = S * 0.66, py = S * 0.62;
+  const mx = (nx + px) / 2 + S * 0.04, my = (ny + py) / 2 - S * 0.09;
+
+  g.save();
+  g.lineCap = 'round';
+  g.shadowColor = 'rgba(255,255,255,0.85)';
+  g.shadowBlur = 26;
+
+  // 外层
+  g.beginPath();
+  g.moveTo(nx, ny);
+  g.quadraticCurveTo(mx, my, px, py);
+  g.strokeStyle = 'rgba(226,246,255,0.75)';
+  g.lineWidth = S * 0.062;
+  g.stroke();
+
+  // 亮芯
+  g.beginPath();
+  g.moveTo(nx, ny);
+  g.quadraticCurveTo(mx, my, px, py);
+  g.strokeStyle = 'rgba(255,255,255,0.98)';
+  g.lineWidth = S * 0.026;
+  g.stroke();
+  g.restore();
+
+  // 冲击点
+  g.save();
+  const ig = g.createRadialGradient(px, py, 0, px, py, S * 0.13);
+  ig.addColorStop(0, 'rgba(255,255,255,0.9)');
+  ig.addColorStop(0.45, 'rgba(220,242,255,0.45)');
+  ig.addColorStop(1, 'rgba(220,242,255,0)');
+  g.fillStyle = ig;
+  g.beginPath();
+  g.arc(px, py, S * 0.13, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  // 飞溅水珠
+  const drops = [
+    [0.575, 0.545, 0.020], [0.640, 0.515, 0.014], [0.700, 0.560, 0.017],
+    [0.585, 0.640, 0.013], [0.735, 0.505, 0.011], [0.520, 0.600, 0.016],
+    [0.615, 0.470, 0.010], [0.760, 0.575, 0.012]
+  ];
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  for (const [x, y, r] of drops) {
+    g.beginPath();
+    g.arc(S * x, S * y, S * r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // 亮闪
+  g.save();
+  g.translate(S * 0.30, S * 0.30);
+  g.rotate(-0.3);
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    g.lineTo(Math.cos(a) * S * 0.075, Math.sin(a) * S * 0.075);
+    g.lineTo(Math.cos(a + Math.PI / 4) * S * 0.016, Math.sin(a + Math.PI / 4) * S * 0.016);
+  }
+  g.closePath();
+  g.fill();
+  g.restore();
+
+  // 四角压暗
+  const vig = g.createRadialGradient(S / 2, S / 2, S * 0.30, S / 2, S / 2, S * 0.72);
+  vig.addColorStop(0, 'rgba(10,40,60,0)');
+  vig.addColorStop(1, 'rgba(10,40,60,0.16)');
+  g.fillStyle = vig;
+  g.fillRect(0, 0, S, S);
+
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

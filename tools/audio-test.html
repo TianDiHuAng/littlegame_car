@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>亮车计划 · 音效试听</title>
+<style>
+  :root { --ink:#1d2b3a; --sub:#6a7f96; --line:#e3eaf1; --brand:#2f86c8; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: #eef4f9; color: var(--ink);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    display: flex; justify-content: center; padding: 28px 16px 60px;
+  }
+  .wrap { width: min(680px, 100%); }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .lead { color: var(--sub); font-size: 13px; line-height: 1.7; margin: 0 0 22px; }
+  .card { background: #fff; border-radius: 18px; padding: 20px 22px; box-shadow: 0 10px 30px rgba(20,50,80,.08); margin-bottom: 16px; }
+  .card h2 { font-size: 13px; letter-spacing: .08em; color: var(--sub); margin: 0 0 14px; font-weight: 600; text-transform: uppercase; }
+  #boot {
+    width: 100%; padding: 18px; border: 0; border-radius: 14px; font-size: 17px; font-weight: 700;
+    color: #fff; background: linear-gradient(180deg,#37c99a,#1fa37a); cursor: pointer;
+    box-shadow: 0 10px 24px rgba(31,163,122,.3); transition: transform .12s;
+  }
+  #boot:active { transform: scale(.985); }
+  #boot.done { background: #eef4f9; color: var(--sub); box-shadow: none; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  button.act {
+    flex: 1 1 auto; min-width: 130px; padding: 13px 16px; border-radius: 12px;
+    border: 1.5px solid var(--line); background: #fff; color: var(--ink);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .12s;
+  }
+  button.act:hover { border-color: var(--brand); color: var(--brand); }
+  button.act:active { background: #f2f8fd; transform: scale(.985); }
+  button.act.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .slider { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+  .slider label { font-size: 13px; color: var(--sub); min-width: 92px; }
+  .slider input[type=range] { flex: 1; accent-color: var(--brand); }
+  .slider b { font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; font-size: 13px; }
+  .note { font-size: 12px; color: #93a4b5; margin: 12px 0 0; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>亮车计划 · 音效试听</h1>
+  <p class="lead">
+    全部是 WebAudio 实时合成的，没有用任何音频文件。<br>
+    先点下面的按钮解锁音频（浏览器要求必须有一次点击）。<br><b>水流和泡沫都要「按住」才响，松开就停</b>，和游戏里一样。
+  </p>
+
+  <div class="card">
+    <button id="boot">▶ 点我开始</button>
+  </div>
+
+  <div class="card">
+    <h2>水流</h2>
+    <div class="row">
+      <button class="act" data-water="0">按住 · 静止</button>
+      <button class="act" data-water="0.45">按住 · 慢速</button>
+      <button class="act" data-water="1">按住 · 快速</button>
+      <button class="act" data-water="stop">停止</button>
+    </div>
+    <div class="slider">
+      <label>移动速度</label>
+      <input type="range" id="speed" min="0" max="100" value="45">
+      <b id="speedV">45%</b>
+    </div>
+    <div class="slider">
+      <label>剩余水量</label>
+      <input type="range" id="left" min="0" max="100" value="100">
+      <b id="leftV">100%</b>
+    </div>
+    <p class="note">
+      拖动「剩余水量」到 20% 以下再点水流，能听出**快没水时声音变干变尖**。<br>
+      拖动「移动速度」能听出**划得快时水声变亮**——这是和手感绑定的。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>泡沫</h2>
+    <div class="row">
+      <button class="act" data-foam="1">按住 · 喷泡沫</button>
+      <button class="act" data-foam="0">停止</button>
+    </div>
+    <p class="note">低通 1400Hz，比水流更闷更厚。</p>
+  </div>
+
+  <div class="card">
+    <h2>点音效</h2>
+    <div class="row">
+      <button class="act" data-fx="impact">冲击音 · 单次</button>
+      <button class="act" data-fx="impact10">冲击音 · 连续 10 次</button>
+      <button class="act" data-fx="drip">水滴</button>
+      <button class="act" data-fx="drip6">水滴 · 连续 6 次</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="act" data-fx="chime">完成音效</button>
+      <button class="act" data-fx="blip">点击反馈</button>
+      <button class="act" data-fx="dry">断水提示</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var ac = null, master = null, water = null, foam = null;
+  var noiseBuf = {};
+  var waterOn = false, waterSpeed = 0.45, waterLeft = 1;
+
+  function pinkNoise(ctx) {
+    if (noiseBuf.pink) return noiseBuf.pink;
+    var len = Math.floor(ctx.sampleRate * 3);
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (var i = 0; i < len; i++) {
+      var w = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + w * 0.0555179;
+      b1 = 0.99332 * b1 + w * 0.0750759;
+      b2 = 0.96900 * b2 + w * 0.1538520;
+      b3 = 0.86650 * b3 + w * 0.3104856;
+      b4 = 0.55000 * b4 + w * 0.5329522;
+      b5 = -0.7616 * b5 - w * 0.0168980;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+      b6 = w * 0.115926;
+    }
+    noiseBuf.pink = buf;
+    return buf;
+  }
+
+  function whiteNoise(ctx) {
+    if (noiseBuf.white) return noiseBuf.white;
+    var len = Math.floor(ctx.sampleRate * 2);
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    noiseBuf.white = buf;
+    return buf;
+  }
+
+  function loopSrc(ctx, buf) {
+    var s = ctx.createBufferSource();
+    s.buffer = buf; s.loop = true; s.start();
+    return s;
+  }
+
+  function boot() {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { alert('这个浏览器不支持 WebAudio'); return; }
+    ac = new AC();
+
+    master = ac.createGain();
+    master.gain.value = 0.9;
+    master.connect(ac.destination);
+
+    var pink = loopSrc(ac, pinkNoise(ac));
+
+    var bp1 = ac.createBiquadFilter(); bp1.type = 'bandpass'; bp1.frequency.value = 700; bp1.Q.value = 0.9;
+    var bp2 = ac.createBiquadFilter(); bp2.type = 'bandpass'; bp2.frequency.value = 1650; bp2.Q.value = 1.4;
+    var bp3 = ac.createBiquadFilter(); bp3.type = 'bandpass'; bp3.frequency.value = 3200; bp3.Q.value = 2.2;
+
+    var g1 = ac.createGain(); g1.gain.value = 0.55;
+    var g2 = ac.createGain(); g2.gain.value = 0.42;
+    var g3 = ac.createGain(); g3.gain.value = 0.20;
+
+    var white = loopSrc(ac, whiteNoise(ac));
+    var hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3800;
+    var gs = ac.createGain(); gs.gain.value = 0.12;
+
+    var body = ac.createGain(); body.gain.value = 0.0001;
+
+    // LFO 只调制 churn 这一级；body 归零后彻底无声
+    var churn = ac.createGain(); churn.gain.value = 0.85;
+
+    pink.connect(bp1); bp1.connect(g1); g1.connect(body);
+    pink.connect(bp2); bp2.connect(g2); g2.connect(body);
+    pink.connect(bp3); bp3.connect(g3); g3.connect(body);
+    white.connect(hp); hp.connect(gs); gs.connect(body);
+    body.connect(churn);
+    churn.connect(master);
+
+    var lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 6.4;
+    var lfoGain = ac.createGain(); lfoGain.gain.value = 0.15;
+    lfo.connect(lfoGain); lfoGain.connect(churn.gain); lfo.start();
+
+    water = { body: body, churn: churn, bp1: bp1, bp2: bp2, bp3: bp3, g3: g3, gs: gs, lfo: lfo };
+
+    var fp = loopSrc(ac, pinkNoise(ac));
+    var flp = ac.createBiquadFilter(); flp.type = 'lowpass'; flp.frequency.value = 1400;
+    var fg = ac.createGain(); fg.gain.value = 0.0001;
+    fp.connect(flp); flp.connect(fg); fg.connect(master);
+    foam = { gain: fg, lp: flp };
+  }
+
+  function updateWater() {
+    if (!ac || !water) return;
+    var t = ac.currentTime;
+    var target = waterOn ? (0.055 + waterSpeed * 0.085) : 0.0001;
+    var bright = 0.55 + waterSpeed * 0.75 + (1 - waterLeft) * 0.7;
+
+    water.body.gain.cancelScheduledValues(t);
+    water.body.gain.setTargetAtTime(target, t, waterOn ? 0.03 : 0.06);
+    water.churn.gain.setTargetAtTime(waterOn ? 0.85 : 0.0, t, waterOn ? 0.03 : 0.05);
+    water.bp1.frequency.setTargetAtTime(560 * bright, t, 0.06);
+    water.bp2.frequency.setTargetAtTime(1500 * bright, t, 0.06);
+    water.bp3.frequency.setTargetAtTime(3000 * bright, t, 0.06);
+
+    var dry = 1 - waterLeft;
+    water.g3.gain.setTargetAtTime(0.18 + dry * 0.5, t, 0.1);
+    water.gs.gain.setTargetAtTime(0.10 + dry * 0.34, t, 0.1);
+    water.lfo.frequency.setTargetAtTime(5 + waterSpeed * 9 + dry * 6, t, 0.15);
+  }
+
+  function setFoam(on) {
+    if (!ac || !foam) return;
+    var t = ac.currentTime;
+    foam.gain.gain.setTargetAtTime(on ? (0.05 + waterSpeed * 0.06) : 0.0001, t, 0.05);
+    foam.lp.frequency.setTargetAtTime(1100 + waterSpeed * 900, t, 0.06);
+  }
+
+  function impactTick(strength) {
+    if (!ac) return;
+    var t = ac.currentTime;
+    var s = ac.createBufferSource();
+    s.buffer = whiteNoise(ac);
+    s.playbackRate.value = 1.4 + Math.random() * 0.8;
+    var bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1400 + Math.random() * 2600;
+    bp.Q.value = 1.6 + Math.random() * 2;
+    var g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.05 * (strength || 1), t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07 + Math.random() * 0.05);
+    s.connect(bp); bp.connect(g); g.connect(master);
+    s.start(t, Math.random() * 1.5, 0.12);
+    s.stop(t + 0.15);
+  }
+
+  function drip() {
+    if (!ac) return;
+    var t = ac.currentTime;
+    var o = ac.createOscillator();
+    o.type = 'sine';
+    var f0 = 900 + Math.random() * 1100;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f0 * 0.55, t + 0.09);
+    var g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.14);
+  }
+
+  function chime() {
+    if (!ac) return;
+    var notes = [523.25, 659.25, 783.99, 1046.5];
+    for (var i = 0; i < notes.length; i++) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = notes[i];
+      var t = ac.currentTime + i * 0.075;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.14, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.55);
+    }
+  }
+
+  function blip(freq) {
+    if (!ac) return;
+    var o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = freq || 660;
+    var t = ac.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.10, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.2);
+  }
+
+  /* ---------------- 交互 ---------------- */
+
+  var bootBtn = document.getElementById('boot');
+  bootBtn.addEventListener('click', function () {
+    boot();
+    bootBtn.textContent = '✓ 音频已就绪';
+    bootBtn.classList.add('done');
+  });
+
+  function markActive(btn) {
+    btn.classList.add('on');
+    setTimeout(function () { btn.classList.remove('on'); }, 600);
+  }
+
+  document.querySelectorAll('[data-water]').forEach(function (btn) {
+    var v = btn.dataset.water;
+    if (v === 'stop') {
+      btn.addEventListener('click', function () {
+        boot(); waterOn = false; updateWater(); markActive(btn);
+      });
+      return;
+    }
+    // 按住才响，和游戏里一致
+    var start = function (e) {
+      e.preventDefault();
+      boot();
+      waterSpeed = parseFloat(v);
+      document.getElementById('speed').value = Math.round(waterSpeed * 100);
+      document.getElementById('speedV').textContent = Math.round(waterSpeed * 100) + '%';
+      waterOn = true;
+      updateWater();
+      btn.classList.add('on');
+    };
+    var stop = function () {
+      waterOn = false;
+      updateWater();
+      btn.classList.remove('on');
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointerleave', stop);
+    btn.addEventListener('pointercancel', stop);
+  });
+
+  document.querySelectorAll('[data-foam]').forEach(function (btn) {
+    if (btn.dataset.foam === '0') {
+      btn.addEventListener('click', function () {
+        boot(); setFoam(false); markActive(btn);
+      });
+      return;
+    }
+    var fs = function (e) {
+      e.preventDefault(); boot(); setFoam(true); btn.classList.add('on');
+    };
+    var fstop = function () {
+      setFoam(false); btn.classList.remove('on');
+    };
+    btn.addEventListener('pointerdown', fs);
+    btn.addEventListener('pointerup', fstop);
+    btn.addEventListener('pointerleave', fstop);
+    btn.addEventListener('pointercancel', fstop);
+  });
+
+  document.querySelectorAll('[data-fx]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      boot();
+      markActive(btn);
+      var k = btn.dataset.fx;
+      if (k === 'impact') impactTick(1);
+      else if (k === 'impact10') {
+        for (var i = 0; i < 10; i++) setTimeout(impactTick, i * 90, 1);
+      } else if (k === 'drip') drip();
+      else if (k === 'drip6') {
+        for (var j = 0; j < 6; j++) setTimeout(drip, j * 260);
+      } else if (k === 'chime') chime();
+      else if (k === 'blip') blip(660);
+      else if (k === 'dry') blip(300);
+    });
+  });
+
+  // 失焦或切到后台立刻静音，避免忘记关掉一直响
+  function panicStop() {
+    waterOn = false;
+    if (ac && ac.state === 'running') { try { ac.suspend(); } catch (e) {} }
+    document.querySelectorAll('.act.on').forEach(function (b) { b.classList.remove('on'); });
+  }
+  window.addEventListener('blur', panicStop);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) panicStop(); });
+  window.addEventListener('pagehide', panicStop);
+
+  var speedEl = document.getElementById('speed');
+  speedEl.addEventListener('input', function () {
+    waterSpeed = +speedEl.value / 100;
+    document.getElementById('speedV').textContent = speedEl.value + '%';
+    updateWater();
+  });
+
+  var leftEl = document.getElementById('left');
+  leftEl.addEventListener('input', function () {
+    waterLeft = +leftEl.value / 100;
+    document.getElementById('leftV').textContent = leftEl.value + '%';
+    updateWater();
+  });
+})();
+</script>
+</body>
+</html>

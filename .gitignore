@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+
+# 临时/调试产物
+*.log
+prototype/_*.png
+minigame/_*.png
+tools/_*.mjs
+tools/_*.cjs
+tools/_*.txt
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/

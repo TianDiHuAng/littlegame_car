@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #0e1520; }
+  #stage {
+    position: relative; width: 480px; height: 900px; margin: 0 auto; overflow: hidden;
+    background: linear-gradient(180deg, #d6efff 0%, #a2d5f3 62%, #9ccfdc 100%);
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .hillF { position: absolute; left: -10%; width: 120%; height: 260px; bottom: 180px;
+           background: #b7d3e4; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+  .hillN { position: absolute; left: -15%; width: 130%; height: 220px; bottom: 120px;
+           background: #9ecfc4; border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+  .ground { position: absolute; left: 0; width: 100%; height: 260px; bottom: 0;
+            background: linear-gradient(180deg, #93d7ab 0%, #5cb27f 100%); }
+  #car { position: absolute; width: 436px; left: 50%; margin-left: -218px; bottom: 210px; }
+  .hud { position: absolute; left: 18px; top: 18px; font-size: 13px; color: rgba(20,48,66,.75); }
+  .hud b { display: block; font-size: 15px; margin-top: 6px; }
+  .pct { position: absolute; right: 18px; top: 18px; font-size: 19px; font-weight: 700; color: #0d3b2e; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="hillF"></div>
+  <div class="hillN"></div>
+  <div class="ground"></div>
+  <img id="car" src="../prototype/assets/car_sedan.png" alt="">
+  <div class="hud">第 1/16 单<b>小红轿车</b></div>
+  <div class="pct">0%</div>
+</div>
+</body>
+</html>

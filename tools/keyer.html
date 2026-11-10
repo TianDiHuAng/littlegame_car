@@ -1,0 +1,36 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script>
+// 用法：keyer.html?src=../prototype/assets/raw_x.png
+// Chrome 截图时加 --default-background-color=00000000 得到透明 PNG
+const src = new URLSearchParams(location.search).get('src') || '../prototype/assets/raw_car_sedan.png';
+const img = new Image();
+img.onload = () => {
+  const c = document.getElementById('c');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height);
+  const p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const r = p[i], gg = p[i + 1], b = p[i + 2];
+    // 生成的绿背景不是纯色，按"绿比红蓝高多少"判定
+    const mx = Math.max(r, b);
+    const diff = gg - mx;
+    let a = 1;
+    if (diff > 40) a = 0;
+    else if (diff > 12) a = (40 - diff) / 28;
+    const ng = gg > mx ? mx : gg;
+    p[i] = r; p[i + 1] = ng; p[i + 2] = b;
+    p[i + 3] = Math.round(p[i + 3] * a);
+  }
+  g.putImageData(d, 0, 0);
+  document.title = 'done';
+};
+img.src = src;
+</script>
+</body></html>

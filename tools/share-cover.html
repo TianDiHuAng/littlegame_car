@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; overflow: hidden; }
+  #c { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1000" height="800"></canvas>
+<script>
+// 分享封面：500×400 逻辑尺寸，2 倍图导出
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+const W = 1000, H = 800;
+
+function load(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+
+function rr(x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+(async () => {
+  const bg = await load('../prototype/assets/bg_outdoor.webp');
+  const car = await load('../prototype/assets/car_sedan.webp');
+
+  // 背景 cover
+  const sc = Math.max(W / bg.width, H / bg.height);
+  g.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc);
+
+  // 压暗一点，字才看得清
+  const dim = g.createLinearGradient(0, 0, 0, H);
+  dim.addColorStop(0, 'rgba(8,26,42,0.55)');
+  dim.addColorStop(0.55, 'rgba(8,26,42,0.12)');
+  dim.addColorStop(1, 'rgba(8,26,42,0.62)');
+  g.fillStyle = dim;
+  g.fillRect(0, 0, W, H);
+
+  // 车（右下角，稍微出框）
+  const cw = W * 0.78;
+  const ch = car.height * (cw / car.width);
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,0.35)';
+  g.shadowBlur = 40;
+  g.shadowOffsetY = 20;
+  g.drawImage(car, W * 0.20, H - ch * 0.92, cw, ch);
+  g.restore();
+
+  // 标题
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+
+  g.save();
+  g.shadowColor = 'rgba(4,20,34,0.55)';
+  g.shadowBlur = 24;
+  g.shadowOffsetY = 8;
+  g.fillStyle = '#ffffff';
+  g.font = '900 108px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.fillText('亮车计划', 64, 190);
+  g.restore();
+
+  // 副标题
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  g.font = '600 42px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.fillText('解压洗车 · 一冲就爽', 68, 254);
+
+  // 标签药丸
+  const tags = ['泡沫', '刮刀', '补漆'];
+  let tx = 68;
+  g.font = '600 26px "PingFang SC","Microsoft YaHei",sans-serif';
+  for (const t of tags) {
+    const tw = g.measureText(t).width + 40;
+    g.fillStyle = 'rgba(255,255,255,0.20)';
+    rr(tx, 288, tw, 46, 23);
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.40)';
+    g.lineWidth = 2;
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.fillText(t, tx + tw / 2, 320);
+    g.textAlign = 'left';
+    tx += tw + 14;
+  }
+
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

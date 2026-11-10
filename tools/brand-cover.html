@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;overflow:hidden;background:#000}#c{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1200" height="960"></canvas>
+<script>
+// 封面图 1200×960（5:4）：列表卡片 / 分享卡片 / 备案配图都能用
+const CW = 1200, CH = 960, K = 1.2;   // K = 相对 1000×800 设计稿的缩放
+const c = document.getElementById('c');
+const g = c.getContext('2d');
+g.scale(K, K);
+const W = CW / K, H = CH / K;         // 1000 × 800
+
+function load(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+
+function rr(x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+(async () => {
+  const bg = await load('../prototype/assets/bg_outdoor.webp');
+  const car = await load('../prototype/assets/car_sedan.webp');
+
+  // 背景 cover
+  const sc = Math.max(W / bg.width, H / bg.height);
+  g.drawImage(bg, (W - bg.width * sc) / 2, (H - bg.height * sc) / 2, bg.width * sc, bg.height * sc);
+
+  // 压暗，保证文字可读
+  const dim = g.createLinearGradient(0, 0, 0, H);
+  dim.addColorStop(0, 'rgba(6,24,40,0.62)');
+  dim.addColorStop(0.52, 'rgba(6,24,40,0.10)');
+  dim.addColorStop(1, 'rgba(6,24,40,0.66)');
+  g.fillStyle = dim;
+  g.fillRect(0, 0, W, H);
+
+  // 车
+  const cw = W * 0.80;
+  const ch = car.height * (cw / car.width);
+  g.save();
+  g.shadowColor = 'rgba(0,0,0,0.38)';
+  g.shadowBlur = 46;
+  g.shadowOffsetY = 22;
+  g.drawImage(car, W * 0.18, H - ch * 0.90, cw, ch);
+  g.restore();
+
+  // 水柱（右上打向右下车头）
+  g.save();
+  g.lineCap = 'round';
+  g.shadowColor = 'rgba(255,255,255,0.9)';
+  g.shadowBlur = 22;
+  g.beginPath();
+  g.moveTo(W * 1.02, H * 0.06);
+  g.quadraticCurveTo(W * 0.90, H * 0.42, W * 0.74, H * 0.62);
+  g.strokeStyle = 'rgba(230,248,255,0.8)';
+  g.lineWidth = 26;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(W * 1.02, H * 0.06);
+  g.quadraticCurveTo(W * 0.90, H * 0.42, W * 0.74, H * 0.62);
+  g.strokeStyle = 'rgba(255,255,255,0.98)';
+  g.lineWidth = 9;
+  g.stroke();
+  g.restore();
+
+  // 标题
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+
+  g.save();
+  g.shadowColor = 'rgba(4,20,34,0.6)';
+  g.shadowBlur = 26;
+  g.shadowOffsetY = 9;
+  g.fillStyle = '#ffffff';
+  g.font = '900 112px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.fillText('亮车计划', 62, 196);
+  g.restore();
+
+  g.fillStyle = 'rgba(255,255,255,0.93)';
+  g.font = '600 44px "PingFang SC","Microsoft YaHei",sans-serif';
+  g.fillText('按住就冲，一冲就净', 66, 262);
+
+  // 标签
+  const tags = ['泡沫', '刮刀', '补漆'];
+  let tx = 66;
+  g.font = '600 26px "PingFang SC","Microsoft YaHei",sans-serif';
+  for (const t of tags) {
+    const tw = g.measureText(t).width + 42;
+    g.fillStyle = 'rgba(255,255,255,0.18)';
+    rr(tx, 296, tw, 48, 24);
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.42)';
+    g.lineWidth = 2;
+    g.stroke();
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.fillText(t, tx + tw / 2, 329);
+    g.textAlign = 'left';
+    tx += tw + 14;
+  }
+
+  window.__done = true;
+})();
+</script>
+</body>
+</html>

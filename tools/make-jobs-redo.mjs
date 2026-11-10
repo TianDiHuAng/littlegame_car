@@ -1,0 +1,18 @@
+import { writeFileSync } from 'node:fs';
+
+const STYLE = 'Hand-painted game illustration, thick visible brush strokes, oil-painting texture with soft canvas grain, NO black outlines, NO line art, clean simple shapes.';
+const TAIL = 'Isolated on a flat uniform green background, single complete object, no ground plane, no cast shadow, no vignette, no text, no watermark, no logos, no door handles, no door seams, no license plate, no mirrors, no wipers, no badges, no locks, no vents, no emblems.';
+
+const jobs = [
+  {
+    name: 'car_van', w: 1216, h: 832, seed: 981100,
+    prompt: `${STYLE} A cute cartoon small delivery van, pure side view, facing right, orthogonal view with no perspective distortion, chunky rounded proportions, boxy tall body with a flat plain roof, flat slab sides. Body: soft butter yellow painted in broad brush strokes with a gentle vertical gradient down to golden mustard, warm light from the upper left, simple and plain with NO chrome trim and NO two-tone panels. Cabin: three tall rectangular side windows in a row, pale ice-blue glass with soft diagonal painted reflections, separated by two simple body-colored pillars. Wheels: two dark charcoal tires with hand-painted silver five-spoke rims and bright crescent highlights. Lights: one small rounded warm-yellow headlight at the front corner. Very clean minimal silhouette, smooth continuous outline, no interior detail visible. ${TAIL}`
+  },
+  {
+    name: 'car_jeep', w: 1216, h: 832, seed: 981101,
+    prompt: `${STYLE} A cute cartoon off-road SUV, pure side view, facing right, orthogonal view with no perspective distortion, chunky rounded proportions, tall boxy silhouette with a plain flat roof and a simple thin roof rack. Body: muted dusty olive green painted in broad brush strokes with a gentle vertical gradient, matte finish, smooth simple surfaces with NO black outline and NO panel line drawing. Cabin: two upright rectangular side windows in pale ice-blue glass with soft painted reflections. Wheels: two oversized chunky dark charcoal tires with hand-painted silver five-spoke rims and soft highlights, simple rounded wheel arches painted in the body color. Lights: one small squared warm-yellow headlight at the front corner. Very clean minimal silhouette, smooth continuous outline, no interior detail visible. ${TAIL}`
+  }
+];
+
+writeFileSync('D:/AI/project/littlegame/tools/jobs-redo.json', JSON.stringify(jobs, null, 2), 'utf8');
+console.log('jobs-redo.json', jobs.length, '个任务');
