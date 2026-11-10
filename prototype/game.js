@@ -3493,7 +3493,40 @@
     ctx.fillText('完成', cb.x + cb.w / 2, cb.y + cb.h / 2);
     buttons.push({ x: cb.x, y: cb.y, w: cb.w, h: cb.h, onClick: closeUpgrade });
 
+    // 重置进度（清空存档，回到第 1 单）
+    var rb = { x: W / 2 - 60, y: cb.y - 26, w: 120, h: 22 };
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '500 12px ' + FONT;
+    ctx.fillStyle = '#a3b1c0';
+    ctx.fillText('重置进度', W / 2, rb.y + rb.h / 2);
     ctx.restore();
+    buttons.push({ x: rb.x, y: rb.y, w: rb.w, h: rb.h, onClick: resetProgress });
+
+    ctx.restore();
+  }
+
+  /** 清空存档并回到第 1 单 */
+  function resetProgress() {
+    function doReset() {
+      save = defaultSave();
+      persist();
+      levelIndex = 0;
+      state = 'play';
+      startOrder(LEVELS[0]);
+    }
+    if (typeof wx !== 'undefined' && wx.showModal) {
+      wx.showModal({
+        title: '重置进度',
+        content: '金币、等级、关卡进度都会清空，确定吗？',
+        confirmText: '确定重置',
+        cancelText: '取消',
+        success: function (r) { if (r.confirm) doReset(); }
+      });
+    } else {
+      doReset();
+    }
   }
 
   function buyUpgrade(key, idx, price) {
@@ -3563,7 +3596,8 @@
         'scr ' + (i2.screenWidth || '?') + 'x' + (i2.screenHeight || '?') + ' @' + (i2.pixelRatio || '?'),
         'win ' + (i2.windowWidth || '?') + 'x' + (i2.windowHeight || '?'),
         'buf ' + cv.width + 'x' + cv.height,
-        'use ' + Math.round(W) + 'x' + Math.round(H) + ' d' + DPR.toFixed(2)
+        'use ' + Math.round(W) + 'x' + Math.round(H) + ' d' + DPR.toFixed(2),
+        'idx ' + save.idx + ' lv' + save.level + ' 第' + (levelIndex + 1) + '单'
       ];
       var bw2 = 158, lh = 15;
       ctx.save();

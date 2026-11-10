@@ -149,7 +149,11 @@
   }
 
   /* ---------------- 存储 ---------------- */
-  install('localStorage', {
+  // 注意：开发者工具里可能存在一个 Web 的 localStorage。
+  // install() 见到"已存在"就跳过，存档就会写进工具的 Web 存储 ——
+  // 用户清"小游戏数据缓存"根本清不掉，表现就是进度永远回不到第 1 单。
+  // 只要 wx 有存储 API，就强制接管。
+  var storageImpl = {
     getItem: function (k) {
       try {
         var v = wx.getStorageSync(k);
@@ -161,8 +165,26 @@
     },
     removeItem: function (k) {
       try { wx.removeStorageSync(k); } catch (e) {}
+    },
+    clear: function () {
+      try { wx.clearStorageSync(); } catch (e) {}
+    },
+    key: function () { return null; }
+  };
+
+  if (typeof wx !== 'undefined' && wx.getStorageSync) {
+    var took = false;
+    try { G.localStorage = storageImpl; took = (G.localStorage === storageImpl); } catch (e) {}
+    if (!took) {
+      try {
+        Object.defineProperty(G, 'localStorage', {
+          value: storageImpl, configurable: true, writable: true
+        });
+      } catch (e) {}
     }
-  });
+  } else {
+    install('localStorage', storageImpl);
+  }
 
   /* ---------------- 震动 ---------------- */
   function shortVibe(strong) {
