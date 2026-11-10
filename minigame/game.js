@@ -3649,6 +3649,43 @@ window.CW_IMG = {
         x: abx, y: aby, w: abs, h: abs,
         onClick: function () { setAudioEnabled(!audioOn); }
       });
+
+      // 重来：随时重开当前这一单
+      var rbx = abx + abs + 10, rby = aby, rbs = abs;
+      var rcx = rbx + rbs / 2, rcy = rby + rbs / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.76)';
+      ctx.beginPath(); ctx.arc(rcx, rcy, rbs / 2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(24,54,74,0.16)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.arc(rcx, rcy, rbs / 2 - 0.6, 0, TAU); ctx.stroke();
+
+      // 循环箭头
+      var ra0 = -Math.PI * 0.35, ra1 = Math.PI * 1.35, rrad = 7.4;
+      ctx.strokeStyle = '#4a6a80';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(rcx, rcy, rrad, ra0, ra1);
+      ctx.stroke();
+
+      // 箭头三角
+      var ex = rcx + rrad * Math.cos(ra1), ey = rcy + rrad * Math.sin(ra1);
+      var tx = -Math.sin(ra1), ty = Math.cos(ra1);
+      var nx = Math.cos(ra1), ny = Math.sin(ra1);
+      ctx.fillStyle = '#4a6a80';
+      ctx.beginPath();
+      ctx.moveTo(ex + tx * 4.8, ey + ty * 4.8);
+      ctx.lineTo(ex + nx * 3.4, ey + ny * 3.4);
+      ctx.lineTo(ex - nx * 3.4, ey - ny * 3.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      buttons.push({
+        x: rbx, y: rby, w: rbs, h: rbs,
+        onClick: function () { restartLevel(); }
+      });
     }
 
     // 工具条
