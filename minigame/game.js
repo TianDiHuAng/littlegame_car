@@ -7,9 +7,13 @@
 (function () {
   'use strict';
 
-  var info = wx.getSystemInfoSync();
-  var SW = info.screenWidth || 375;
-  var SH = info.screenHeight || 667;
+  function sysInfo() {
+    try { return wx.getSystemInfoSync() || {}; } catch (e) { return {}; }
+  }
+
+  var info = sysInfo();
+  var SW = info.windowWidth || info.screenWidth || 375;
+  var SH = info.windowHeight || info.screenHeight || 667;
   var DPR = Math.min(info.pixelRatio || 1, 2);
   var G = (typeof GameGlobal !== 'undefined') ? GameGlobal : this;
 
@@ -18,20 +22,47 @@
     try { G[name] = value; } catch (e) { /* 只读就算了 */ }
   }
 
+  /**
+   * 每次都取当前可视区域。
+   * 启动时缓存一次是不够的：模拟器换机型、真机旋转/分屏、地址栏收放都会变，
+   * 而且 screenHeight 常常比可视区大，直接用会留黑边。
+   */
+  function viewSize() {
+    var i2 = sysInfo();
+    var w = i2.windowWidth || i2.screenWidth || SW;
+    var h = i2.windowHeight || i2.screenHeight || SH;
+    if (!(w > 0)) w = SW;
+    if (!(h > 0)) h = SH;
+    var d = i2.pixelRatio || DPR || 1;
+    if (!(d > 0)) d = 1;
+    return { w: w, h: h, dpr: Math.min(d, 2) };
+  }
+
   /* ---------------- 主画布 ---------------- */
   var mainCanvas = wx.createCanvas();
-  mainCanvas.width = Math.round(SW * DPR);
-  mainCanvas.height = Math.round(SH * DPR);
-  mainCanvas.style = { width: SW + 'px', height: SH + 'px' };
+  var vs0 = viewSize();
+  mainCanvas.width = Math.round(vs0.w * vs0.dpr);
+  mainCanvas.height = Math.round(vs0.h * vs0.dpr);
+  mainCanvas.style = { width: vs0.w + 'px', height: vs0.h + 'px' };
+  SW = vs0.w; SH = vs0.h; DPR = vs0.dpr;
+
+  function applyCanvasSize() {
+    var v = viewSize();
+    mainCanvas.width = Math.round(v.w * v.dpr);
+    mainCanvas.height = Math.round(v.h * v.dpr);
+    SW = v.w; SH = v.h; DPR = v.dpr;
+  }
 
   mainCanvas.getBoundingClientRect = function () {
-    return { left: 0, top: 0, width: SW, height: SH, right: SW, bottom: SH };
+    var v = viewSize();
+    return { left: 0, top: 0, width: v.w, height: v.h, right: v.w, bottom: v.h };
   };
 
   var stageEl = {
     style: {},
     getBoundingClientRect: function () {
-      return { left: 0, top: 0, width: SW, height: SH, right: SW, bottom: SH };
+      var v = viewSize();
+      return { left: 0, top: 0, width: v.w, height: v.h, right: v.w, bottom: v.h };
     }
   };
 
@@ -98,13 +129,25 @@
   };
 
   /* ---------------- 全局 ---------------- */
+  var resizeHooks = [];
   install('document', docEl);
   install('location', { search: '', href: 'minigame:///', origin: '' });
   install('innerWidth', SW);
   install('innerHeight', SH);
   install('devicePixelRatio', DPR);
-  install('addEventListener', function () {});
+  install('addEventListener', function (type, fn) {
+    if (type === 'resize' && typeof fn === 'function') resizeHooks.push(fn);
+  });
   install('removeEventListener', function () {});
+
+  // 可视区变化时通知游戏重新布局（画布尺寸由游戏的 resize() 自己设置）
+  if (wx.onWindowResize) {
+    wx.onWindowResize(function () {
+      for (var i = 0; i < resizeHooks.length; i++) {
+        try { resizeHooks[i]({ type: 'resize' }); } catch (e) {}
+      }
+    });
+  }
 
   /* ---------------- 存储 ---------------- */
   install('localStorage', {
