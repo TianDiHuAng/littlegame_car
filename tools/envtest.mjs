@@ -135,6 +135,35 @@ try {
   await sleep(200);
   check('云存储写入无异常', true);
 
+  // ── 遮罩：位图若没被真正用于裁剪，真机上污渍会铺成方块 ──
+  await evalP('window.__cw.startLevel(0)');
+  await sleep(1000);
+  const maskStat = await evalP(`
+(function () {
+  var CW = 480, CH = 900;   // envtest 的逻辑尺寸
+  function cover(name) {
+    var canvas = window.__cw.debugCanvas(name);
+    if (!canvas) return -1;
+    var t = document.createElement('canvas');
+    t.width = 100; t.height = 100;
+    var g = t.getContext('2d');
+    var b = window.__cw.level.bounds;          // 归一化 0..1
+    var k = canvas.width / CW;                 // 设备倍率
+    g.drawImage(canvas,
+      b.x * CW * k, b.y * CH * k, b.w * CW * k, b.h * CH * k,
+      0, 0, 100, 100);
+    var d = g.getImageData(0, 0, 100, 100).data;
+    var n = 0;
+    for (var i = 3; i < d.length; i += 4) if (d[i] > 8) n++;
+    return n / 10000;
+  }
+  return JSON.stringify({ mask: cover('mask'), dirt: cover('dirt') });
+})()`);
+  const ms = maskStat ? JSON.parse(maskStat) : { mask: -1, dirt: -1 };
+  check('车身遮罩已生成', ms.mask > 0.15 && ms.mask < 0.75, '覆盖 ' + (ms.mask * 100).toFixed(0) + '%');
+  check('污渍没有溢出车身', ms.dirt > 0 && ms.dirt <= ms.mask * 1.08,
+    '污渍 ' + (ms.dirt * 100).toFixed(0) + '% / 遮罩 ' + (ms.mask * 100).toFixed(0) + '%');
+
   // 排行榜（没有开放数据域应优雅降级）
   await evalP('window.__cw.openRank()');
   await sleep(400);

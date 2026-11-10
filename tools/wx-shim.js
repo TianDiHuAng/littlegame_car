@@ -177,7 +177,18 @@
       return c;
     },
 
-    createImage: function () { return new Image(); },
+    createImage: function () {
+      var im = new Image();
+      // 真实小游戏的图片对象没有 naturalWidth / naturalHeight，
+      // 严苛模式下模拟这一点，防止代码又依赖 DOM 专有属性
+      if (window.__HARSH__) {
+        try {
+          Object.defineProperty(im, 'naturalWidth', { configurable: true, get: function () { return undefined; } });
+          Object.defineProperty(im, 'naturalHeight', { configurable: true, get: function () { return undefined; } });
+        } catch (e) {}
+      }
+      return im;
+    },
 
     onTouchStart: function (cb) { touchCb.start = cb; },
     onTouchMove: function (cb) { touchCb.move = cb; },

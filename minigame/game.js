@@ -972,26 +972,34 @@ window.CW_IMG = {
     var left = keys.length;
     keys.forEach(function (k) {
       var im = wx.createImage();
-      function finish() {
-        if (--left === 0) { imagesReady = true; done(); }
-      }
-      im.onload = function () {
-        im.__ok = true;
-        try { im.complete = true; } catch (e) {}
-        if (!im.naturalWidth) {
-          try { im.naturalWidth = im.width; im.naturalHeight = im.height; } catch (e) {}
+      var settle = function (okFlag) {
+        if (okFlag) {
+          // 小游戏图片对象不一定有 naturalWidth，onload 时就把尺寸记下来
+          im.__w = im.naturalWidth || im.width || 0;
+          im.__h = im.naturalHeight || im.height || 0;
+          im.__ok = true;
+        } else {
+          im.__err = true;
         }
-        finish();
+        if (--left === 0) { imagesReady = true; done(); }
       };
-      im.onerror = function () { try { im.complete = true; } catch (e) {} finish(); };
+      im.onload = function () { settle(true); };
+      im.onerror = function () { settle(false); };
       im.src = src[k];
       IMAGES[k] = im;
     });
   }
 
+  /** 稳健取尺寸：小游戏没有 naturalWidth，退回 width，再退回 onload 时记下的值 */
+  function imgW(im) { return (im && (im.__w || im.naturalWidth || im.width)) || 0; }
+  function imgH(im) { return (im && (im.__h || im.naturalHeight || im.height)) || 0; }
+
   function imgOf(name) {
     var im = name && IMAGES[name];
-    return (im && (im.__ok || (im.complete && im.naturalWidth))) ? im : null;
+    if (!im || im.__err) return null;
+    if (im.__ok) return im;
+    if (im.complete && (im.naturalWidth || im.width)) return im;
+    return null;
   }
 
   var trimCache = {};
@@ -1007,7 +1015,7 @@ window.CW_IMG = {
     if (!im) return null;
     if (softCache[name]) return softCache[name];
 
-    var w = im.naturalWidth, h = im.naturalHeight;
+    var w = imgW(im), h = imgH(im);
     var c = document.createElement('canvas');
     c.width = w; c.height = h;
     var g = c.getContext('2d');
@@ -1035,8 +1043,8 @@ window.CW_IMG = {
     if (tintCache[key]) return tintCache[key];
 
     var c = document.createElement('canvas');
-    c.width = im.naturalWidth;
-    c.height = im.naturalHeight;
+    c.width = imgW(im);
+    c.height = imgH(im);
     var g = c.getContext('2d');
     g.drawImage(im, 0, 0);
     g.globalCompositeOperation = 'source-atop';
@@ -1068,7 +1076,7 @@ window.CW_IMG = {
     if (!im) return null;
     if (trimCache[name]) return trimCache[name];
 
-    var w = im.naturalWidth, h = im.naturalHeight;
+    var w = imgW(im), h = imgH(im);
     var c = document.createElement('canvas');
     c.width = w; c.height = h;
     var g = c.getContext('2d');
@@ -1107,7 +1115,7 @@ window.CW_IMG = {
   function drawArt(c, b, name) {
     var im = imgOf(name);
     if (!im) return false;
-    var t = trimOf(name) || { x: 0, y: 0, w: im.naturalWidth, h: im.naturalHeight };
+    var t = trimOf(name) || { x: 0, y: 0, w: imgW(im), h: imgH(im) };
     c.drawImage(im, t.x, t.y, t.w, t.h, b.x, b.y, b.w, b.h);
     return true;
   }
@@ -1484,7 +1492,7 @@ window.CW_IMG = {
     // 有位图时按"裁边后"的宽高比居中收进 bounds，避免拉伸变形
     var artImg = imgOf(level.art.img);
     if (artImg) {
-      var tt = trimOf(level.art.img) || { w: artImg.naturalWidth, h: artImg.naturalHeight };
+      var tt = trimOf(level.art.img) || { w: imgW(artImg), h: imgH(artImg) };
       var sc = Math.min(bounds.w / tt.w, bounds.h / tt.h);
       var fw = tt.w * sc, fh = tt.h * sc;
       bounds = {
@@ -2390,8 +2398,8 @@ window.CW_IMG = {
 
     var bg = imgOf(level.bg);
     if (bg) {
-      var sc = Math.max(W / bg.naturalWidth, H / bg.naturalHeight);
-      var dw = bg.naturalWidth * sc, dh = bg.naturalHeight * sc;
+      var sc = Math.max(W / imgW(bg), H / imgH(bg));
+      var dw = imgW(bg) * sc, dh = imgH(bg) * sc;
       ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh);
       drawAmbientSky();
       return;
@@ -2929,8 +2937,8 @@ window.CW_IMG = {
     if (tex) {
       // 用"柔边版"贴图：边缘 alpha 渐变到 0，盖多少张都不会出现方块边界
       var stampTex = softTex(rec.tex || 'dirt_soft') || tex;
-      var tw = stampTex.width || stampTex.naturalWidth;
-      var th = stampTex.height || stampTex.naturalHeight;
+      var tw = imgW(stampTex);
+      var th = imgH(stampTex);
       var tiers = [
         { rel: 0.46, n: 12, a0: 0.22, a1: 0.44 },  // 大块：只铺底色起伏
         { rel: 0.22, n: 30, a0: 0.28, a1: 0.58 },  // 中块：主体

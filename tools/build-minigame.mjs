@@ -56,31 +56,8 @@ const r1 = game.replace('      var im = new Image();', '      var im = wx.create
 if (r1 === game) throw new Error('没找到 loadImages 里的 new Image()');
 game = r1;
 
-const onloadOld = `      im.onload = im.onerror = function () {
-        if (--left === 0) { imagesReady = true; done(); }
-      };`;
-const onloadNew = `      function finish() {
-        if (--left === 0) { imagesReady = true; done(); }
-      }
-      im.onload = function () {
-        im.__ok = true;
-        try { im.complete = true; } catch (e) {}
-        if (!im.naturalWidth) {
-          try { im.naturalWidth = im.width; im.naturalHeight = im.height; } catch (e) {}
-        }
-        finish();
-      };
-      im.onerror = function () { try { im.complete = true; } catch (e) {} finish(); };`;
-const r2 = game.replace(onloadOld, onloadNew);
-if (r2 === game) throw new Error('没找到 loadImages 的 onload 赋值');
-game = r2;
-
-const r3 = game.replace(
-  '    return (im && im.complete && im.naturalWidth) ? im : null;',
-  '    return (im && (im.__ok || (im.complete && im.naturalWidth))) ? im : null;'
-);
-if (r3 === game) throw new Error('没找到 imgOf 的返回语句');
-game = r3;
+// 注意：图片尺寸/就绪判断已在 prototype/game.js 里做成小游戏安全的实现
+// （__ok 标记 + imgW/imgH 兼容 width），这里不再重复打补丁。
 
 // ---------- 拼装入口 ----------
 const adapter = readFileSync(join(OUT, 'adapter.js'), 'utf8');
