@@ -1008,6 +1008,7 @@ window.CW_IMG = {
     BOOT_LOG.push(tag);
     if (bootDone || !ctx) return;
     try {
+      ctx.save();                                  // 保住当前的 DPR 变换
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = '#0d1620';
       ctx.fillRect(0, 0, cv.width, cv.height);
@@ -1019,6 +1020,7 @@ window.CW_IMG = {
       for (var i = 0; i < BOOT_LOG.length; i++) {
         ctx.fillText((i + 1) + '. ' + BOOT_LOG[i], 14, 48 + i * 22);
       }
+      ctx.restore();                               // 还原，否则整局按 1:1 绘制
     } catch (e) {}
   }
 
@@ -4503,7 +4505,9 @@ window.CW_IMG = {
   function restartLevel() { startOrder(order); }
 
   function render() {
-    buttons = [];    if (state === 'compare') {
+    buttons = [];
+    // 每帧兜底：任何地方把变换改坏了，这里都能拉回来
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);    if (state === 'compare') {
       drawCompare();
       return;
     }

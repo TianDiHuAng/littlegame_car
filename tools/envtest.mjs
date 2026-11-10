@@ -164,6 +164,23 @@ try {
   check('污渍没有溢出车身', ms.dirt > 0 && ms.dirt <= ms.mask * 1.08,
     '污渍 ' + (ms.dirt * 100).toFixed(0) + '% / 遮罩 ' + (ms.mask * 100).toFixed(0) + '%');
 
+  // ── 画面必须铺满整块缓冲区（DPR 变换一旦被改坏，内容会缩到左上角） ──
+  const corners = await evalP(`
+(function () {
+  var cv = window.__TEST_CANVAS__ || document.querySelector('canvas');
+  var g = cv.getContext('2d');
+  function a(x, y) { return g.getImageData(x, y, 1, 1).data[3]; }
+  return JSON.stringify({
+    buf: cv.width + 'x' + cv.height,
+    br: a(cv.width - 6, cv.height - 6),
+    bl: a(6, cv.height - 6),
+    tr: a(cv.width - 6, 6)
+  });
+})()`);
+  const cr = corners ? JSON.parse(corners) : { buf: '?', br: 0, bl: 0, tr: 0 };
+  check('画面铺满画布（右下角有内容）', cr.br > 0, cr.buf + ' br=' + cr.br);
+  check('画面铺满画布（左下/右上）', cr.bl > 0 && cr.tr > 0, 'bl=' + cr.bl + ' tr=' + cr.tr);
+
   // 排行榜（没有开放数据域应优雅降级）
   await evalP('window.__cw.openRank()');
   await sleep(400);
