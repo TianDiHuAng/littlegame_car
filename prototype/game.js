@@ -548,20 +548,35 @@
     cv.style.width = W + 'px';
     cv.style.height = H + 'px';
 
-    // 运行时可能强制接管画布缓冲区（比如固定成屏幕物理分辨率）。
-    // 那样我们按 CSS 尺寸绘制就只会铺满一部分，下面留一大块空白。
-    // 以缓冲区真实像素为准反推逻辑尺寸，保证画面一定铺满。
-    var bw = cv.width, bh = cv.height;
+    adoptBuffer();
+    applyLayout();
+  }
+
+  /**
+   * 以画布缓冲区真实像素为准反推逻辑尺寸。
+   * 运行时可能把缓冲区固定成屏幕物理分辨率，那样按 CSS 尺寸绘制只会铺满一部分。
+   */
+  function adoptBuffer() {
+    var bw = Math.round(cv.width), bh = Math.round(cv.height);
+    if (!(bw > 0) || !(bh > 0)) return false;
     var wantW = Math.round(W * DPR), wantH = Math.round(H * DPR);
-    if (bw && bh && (bw !== wantW || bh !== wantH)) {
-      DPR = bh / H;                 // 以高度为准推算缩放比
-      if (!(DPR > 0) || !isFinite(DPR)) DPR = 1;
-      W = bw / DPR;
-    }
+    if (bw === wantW && bh === wantH) return false;
+    var s = bh / H;
+    if (!(s > 0) || !isFinite(s)) s = DPR;
+    DPR = s;
+    W = bw / s;
+    return true;
+  }
+
+  /** 按当前 W/H/DPR 重排离屏层、上下文变换，并重建关卡 */
+  function applyLayout() {
+    var bw = Math.round(W * DPR), bh = Math.round(H * DPR);
+    if (cv.width !== bw) cv.width = bw;
+    if (cv.height !== bh) cv.height = bh;
 
     [dirtCv, cleanCv, beforeCv, heavyCv, tintCv].forEach(function (c) {
-      c.width = cv.width;
-      c.height = cv.height;
+      c.width = bw;
+      c.height = bh;
     });
 
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -3695,6 +3710,15 @@
 
   function frame(t) {
     frameCount++;
+    // 每帧核对缓冲区：运行时可能在我们设置之后又改掉它
+    if (hasLayout && cv.width && cv.height) {
+      var ex = Math.round(W * DPR), ey = Math.round(H * DPR);
+      if (Math.abs(cv.width - ex) > 2 || Math.abs(cv.height - ey) > 2) {
+        try {
+          if (adoptBuffer()) applyLayout();
+        } catch (e) {}
+      }
+    }
     var dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
     try {
