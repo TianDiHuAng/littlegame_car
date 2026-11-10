@@ -7,12 +7,21 @@ const SRC = join(ROOT, 'prototype');
 const OUT = join(ROOT, 'minigame');
 const IMG_DIR = join(OUT, 'images');
 
-// ---------- 先记住上一次的 AppID（清理会删掉配置文件） ----------
+// ---------- AppID：优先读 tools/appid.txt（构建不会删它），其次读旧的 project.config.json ----------
+const APPID_FILE = join(ROOT, 'tools', 'appid.txt');
 let prevAppid = 'touristappid';
 let prevName = 'liangchejihua';
+
+try {
+  if (existsSync(APPID_FILE)) {
+    const a = readFileSync(APPID_FILE, 'utf8').trim();
+    if (/^wx[0-9a-f]{16}$/i.test(a)) prevAppid = a;
+  }
+} catch (e) {}
+
 try {
   const prevPath = join(OUT, 'project.config.json');
-  if (existsSync(prevPath)) {
+  if (prevAppid === 'touristappid' && existsSync(prevPath)) {
     const prev = JSON.parse(readFileSync(prevPath, 'utf8'));
     if (prev.appid) prevAppid = prev.appid;
     if (prev.projectname) prevName = prev.projectname;

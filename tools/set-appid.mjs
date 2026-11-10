@@ -22,6 +22,11 @@ const before = cfg.appid;
 cfg.appid = appid;
 writeFileSync(P, JSON.stringify(cfg, null, 2) + '\n', 'utf8');
 
+// 同时存一份到 tools/appid.txt：构建会清空 minigame/ 目录，靠这个文件保住 AppID
+const SIDE = 'D:/AI/project/littlegame/tools/appid.txt';
+writeFileSync(SIDE, appid, 'utf8');
+
 console.log('✓ AppID 已更新');
 console.log('  ' + before + '  →  ' + appid);
+console.log('  已同步写入 tools/appid.txt（构建不会丢）');
 console.log('\n下一步：用微信开发者工具导入 minigame/ 目录，点「上传」');
