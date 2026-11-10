@@ -768,7 +768,29 @@ window.CW_IMG = {
    * ------------------------------------------------------------- */
   var stage = document.getElementById('stage');
   var cv = document.getElementById('game');
-  var ctx = cv.getContext('2d', { alpha: false });
+  // 某些基础库对带选项的 getContext 会返回 null，必须有回退，否则整屏空白且不报错
+  var ctx = cv.getContext('2d', { alpha: false }) || cv.getContext('2d');
+
+  /* 启动步骤显示器：一旦中途失败，屏幕上会留下走到哪一步的清单 */
+  var BOOT_LOG = [];
+  var bootDone = false;
+  function bootMark(tag) {
+    BOOT_LOG.push(tag);
+    if (bootDone || !ctx) return;
+    try {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = '#0d1620';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillStyle = '#5fd39a';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('启动中 ' + BOOT_LOG.length, 14, 16);
+      for (var i = 0; i < BOOT_LOG.length; i++) {
+        ctx.fillText((i + 1) + '. ' + BOOT_LOG[i], 14, 48 + i * 22);
+      }
+    } catch (e) {}
+  }
 
   var dirtCv = document.createElement('canvas');
   var dctx = dirtCv.getContext('2d');
@@ -940,7 +962,7 @@ window.CW_IMG = {
   var cctx = cleanCv.getContext('2d');
   var probe = document.createElement('canvas');
   probe.width = 48; probe.height = 48;
-  var pctx = probe.getContext('2d', { willReadFrequently: true });
+  var pctx = probe.getContext('2d', { willReadFrequently: true }) || probe.getContext('2d');
 
   var NS = window.CW;
   var LEVELS = NS.LEVELS;
@@ -1229,7 +1251,7 @@ window.CW_IMG = {
     if (!probe2) {
       probe2 = document.createElement('canvas');
       probe2.width = 2; probe2.height = 2;
-      probe2ctx = probe2.getContext('2d', { willReadFrequently: true });
+      probe2ctx = probe2.getContext('2d', { willReadFrequently: true }) || probe2.getContext('2d');
     }
     try {
       probe2ctx.clearRect(0, 0, 2, 2);
@@ -4362,6 +4384,14 @@ window.CW_IMG = {
   /** 出错了就把信息画在画布上 —— 真机/模拟器里看不见 console */
   function fatal(e) {
     try {
+      var m0 = (e && (e.message || e)) || 'unknown';
+      console.error('[fatal]', (e && e.stack) || m0);
+      // 画布可能不可用，原生弹窗是最后一道保险
+      if (typeof wx !== 'undefined' && wx.showModal) {
+        wx.showModal({ title: '亮车计划启动失败', content: String(m0).slice(0, 180), showCancel: false });
+      }
+    } catch (e3) {}
+    try {
       var msg = (e && (e.stack || e.message)) || String(e);
       console.error('[fatal]', msg);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -4383,6 +4413,7 @@ window.CW_IMG = {
     var dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0.016;
     lastT = t;
     try {
+      bootDone = true;
       update(dt);
       render();
     } catch (e) {
@@ -4459,12 +4490,32 @@ window.CW_IMG = {
   }
 
   try {
+    bootMark('canvas ' + (ctx ? 'ok' : 'NULL'));
+    if (!ctx) {
+      try {
+        if (typeof wx !== 'undefined' && wx.showModal) {
+          wx.showModal({
+            title: '画布初始化失败',
+            content: 'getContext 返回 null，可能是基础库版本不兼容',
+            showCancel: false
+          });
+        }
+      } catch (e4) {}
+      return;
+    }
     makeGrain();
+    bootMark('grain');
     setupShare();
     setupRecorder();
+    bootMark('share/recorder');
     resize();
+    bootMark('resize ' + W + 'x' + H + ' dpr' + DPR);
     startOrder(LEVELS[clamp(levelIndex, 0, LEVELS.length - 1)]);
-    loadImages(function () { configureLevel(); });
+    bootMark('startOrder');
+    loadImages(function () {
+      bootMark('images ' + Object.keys(IMAGES).length);
+      configureLevel();
+    });
     requestAnimationFrame(frame);
   } catch (e) {
     fatal(e);

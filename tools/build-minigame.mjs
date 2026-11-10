@@ -104,7 +104,12 @@ writeFileSync(join(OUT, 'project.config.json'), JSON.stringify({
     uploadWithSourceMap: false
   },
   packOptions: {
-    ignore: [{ type: 'file', value: 'preview.html' }, { type: 'file', value: 'envtest.html' }],
+    ignore: [
+      { type: 'file', value: 'preview.html' },
+      { type: 'file', value: 'envtest.html' },
+      { type: 'file', value: '_envtest.png' },
+      { type: 'file', value: '_rank.png' }
+    ],
     include: []
   }
 }, null, 2) + '\n', 'utf8');

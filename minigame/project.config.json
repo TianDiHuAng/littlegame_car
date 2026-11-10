@@ -21,6 +21,14 @@
       {
         "type": "file",
         "value": "envtest.html"
+      },
+      {
+        "type": "file",
+        "value": "_envtest.png"
+      },
+      {
+        "type": "file",
+        "value": "_rank.png"
       }
     ],
     "include": []
