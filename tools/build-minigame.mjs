@@ -137,6 +137,8 @@ writeFileSync(join(OUT, 'project.config.json'), JSON.stringify({
       { type: 'file', value: 'preview.html' },
       { type: 'file', value: 'envtest.html' },
       { type: 'file', value: 'adaptertest.html' },
+      { type: 'file', value: 'adapter.js' },
+      { type: 'file', value: 'README.md' },
       { type: 'file', value: '_envtest.png' },
       { type: 'file', value: '_rank.png' }
     ],
