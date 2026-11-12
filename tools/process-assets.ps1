@@ -3,7 +3,9 @@ param(
 )
 
 Add-Type -AssemblyName System.Drawing
-$dir = "D:\AI\project\littlegame\prototype\assets\"
+# 路径相对脚本位置，换机器不用改
+$root = Split-Path -Parent $PSScriptRoot
+$dir = Join-Path $root "prototype\assets\"
 $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 # name, key?, target width
