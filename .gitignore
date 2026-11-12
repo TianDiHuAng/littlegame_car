@@ -1,19 +1,65 @@
-# 依赖
-node_modules/
+# ============================================================
+# 亮车计划 · .gitignore
+# 换行符统一按字节存储（配合 .gitattributes 的 * -text）
+# ============================================================
 
-# 临时/调试产物
-*.log
+# ---------- 密钥 / 凭据（绝对不能进仓库） ----------
+# 微信小游戏代码上传密钥（miniprogram-ci 用）
+private.*.key
+*.private.key
+project.private.config.json
+# 证书与私钥
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+# 环境变量
+.env
+.env.*
+!.env.example
+# 其它
+secrets.json
+credentials.json
+*.secret
+
+# ---------- 依赖 ----------
+node_modules/
+.pnpm-store/
+
+# ---------- 构建 / 测试临时产物 ----------
+# 测试脚本产生的截图与临时文件
 prototype/_*.png
 minigame/_*.png
 tools/_*.mjs
 tools/_*.cjs
 tools/_*.txt
+# 日志
+*.log
+npm-debug.log*
+# 覆盖率
+coverage/
 
-# 系统文件
+# ---------- 生成物说明 ----------
+# 下面这些是构建产物，但需要跟着仓库走（直接可运行 / 可直接上传），
+# 所以刻意不忽略：
+#   prototype/standalone.html   单文件可玩版
+#   prototype/assets.js         浏览器用的 base64 素材表
+#   minigame/game.js            小游戏入口（含适配层，构建生成）
+#   minigame/images/            小游戏素材
+#   minigame/preview.html       浏览器预览页（构建生成）
+#   tools/appid.txt             AppID（公开信息，保留以便构建复现）
+
+# ---------- 系统文件 ----------
 Thumbs.db
 desktop.ini
 .DS_Store
+._*
 
-# 编辑器
+# ---------- 编辑器 / IDE ----------
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
